@@ -1,1 +1,1 @@
-# ECE445-project
+# Auto-following Luggage Platform
