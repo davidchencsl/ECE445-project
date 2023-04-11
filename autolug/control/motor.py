@@ -4,12 +4,12 @@ import Jetson.GPIO as GPIO
 def clamp(val, mi, ma):
     return max(min(val, ma), mi)
 
-def Motor():
-    def __init__(self, id, bus, address):
+class Motor():
+    def __init__(self, id):
         self.id = id
         self.target_speed = 0
         self.current_speed = 0
-        self.pid = PID(1, 0.1, 0.05, setpoint=0)
+        self.pid = PID(0.5, 0.0, 0.00, setpoint=0)
     
     def set_speed(self, speed):
         self.target_speed = speed
@@ -18,7 +18,6 @@ def Motor():
     def update(self, current_speed):
         self.current_speed = current_speed
         output = self.pid(current_speed)
-        print(f"Motor {self.id} pid: {output}")
-        return clamp(output, 0, 255)
+        return int(clamp(output, 0, 255))
 
 

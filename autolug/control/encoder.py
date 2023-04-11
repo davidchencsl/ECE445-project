@@ -1,26 +1,32 @@
 import Jetson.GPIO as GPIO
+import threading
 import time
 
-from autolug.util.parameters import DISTANCE_PER_PULSE
+from util.parameters import DISTANCE_PER_PULSE
 
 class Encoder():
     def __init__(self, id, pin):
         self.id = id
         self.pin = pin
-        self.last_pulse = None
-        self.prev_pulse = None
+        self.steps = 0
+        self.prev_steps = 0
+        self.period = 0.05
+
+        self.thread = threading.Thread(target=self.sample_loop).start()
 
         GPIO.setup(self.pin, GPIO.IN)
         GPIO.add_event_detect(self.pin, GPIO.RISING, callback=self.handler)
     
     def handler(self, channel):
-        self.prev_pulse = self.last_pulse
-        self.last_pulse = time.time()
+        self.steps += 1
     
+    def sample_loop(self):
+        while True:
+            self.speed = (self.steps - self.prev_steps) * DISTANCE_PER_PULSE / self.period
+            self.prev_steps = self.steps
+            time.sleep(self.period)
+
     def get_speed(self):
         # 16 pulses per revolution
-        if self.prev_pulse is None:
-            return 0
-        else:
-            return DISTANCE_PER_PULSE/(self.last_pulse - self.prev_pulse)
+        return self.speed
 
