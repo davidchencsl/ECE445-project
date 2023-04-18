@@ -7,7 +7,7 @@ class Controller():
         self.motor_right = motor_right
         self.encoder_left = encoder_left
         self.encoder_right = encoder_right
-        self.pid = PID(10, 0.0, 0.00, setpoint=0)   
+        self.pid = PID(1, 0.0, 0.00, setpoint=0)   
 
 
     def update(self, deviation_angle, desired_speed):

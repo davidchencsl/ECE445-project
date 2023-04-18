@@ -1,4 +1,4 @@
-ENC1 = 12
+ENC1 = 11
 ENC2 = 13
 
 I2C_ADDR = 0x08

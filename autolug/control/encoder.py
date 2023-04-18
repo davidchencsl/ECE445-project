@@ -13,7 +13,8 @@ class Encoder():
         self.period = 0.05
         self.stop_flag = False
 
-        self.thread = threading.Thread(target=self.sample_loop).start()
+        self.thread = threading.Thread(target=self.sample_loop)
+        self.thread.start()
 
         GPIO.setup(self.pin, GPIO.IN)
         GPIO.add_event_detect(self.pin, GPIO.RISING, callback=self.handler)
