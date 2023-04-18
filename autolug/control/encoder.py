@@ -11,6 +11,7 @@ class Encoder():
         self.steps = 0
         self.prev_steps = 0
         self.period = 0.05
+        self.stop_flag = False
 
         self.thread = threading.Thread(target=self.sample_loop).start()
 
@@ -24,7 +25,13 @@ class Encoder():
         while True:
             self.speed = (self.steps - self.prev_steps) * DISTANCE_PER_PULSE / self.period
             self.prev_steps = self.steps
+            if self.stop_flag:
+                return
             time.sleep(self.period)
+    
+    def stop(self):
+        self.stop_flag = True
+        self.thread.join()
 
     def get_speed(self):
         # 16 pulses per revolution
