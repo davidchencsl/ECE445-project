@@ -6,11 +6,33 @@ from util.parameters import *
 import Jetson.GPIO as GPIO
 import time
 import threading
+from multiprocessing import Process
 from smbus2 import SMBus
+from flask import Flask, request
+import json
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 desired_speed = 1.0
 deviation_angle = 0.0
 stop_flag = False
+app = Flask(__name__)
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    return json.dumps({'l_speed': 0.5,
+                        'r_speed': 0.5,
+                        'l_pwm': 129,
+                        'r_pwm': 129,
+                        'distance': 0.5,
+                       })
+
+@app.route('/api/controls', methods=['POST'])
+def set_controls():
+    data = request.json
+    print(data)
+    return 'OK'
 
 def keyboard_thread():
     global stop_flag
@@ -50,6 +72,8 @@ def main():
 
     bus = SMBus(1)
     threading.Thread(target=keyboard_thread).start()
+    server = Process(target=app.run, args=('0.0.0.0', 6969))
+    server.start()
 
     while True:
     
@@ -66,6 +90,7 @@ def main():
     encoder_left.stop()
     encoder_right.stop()
     bus.close()
+    server.terminate()
     GPIO.cleanup()
 
 
