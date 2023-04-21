@@ -5,13 +5,14 @@ import { ListItem } from 'react-native-elements'
 import Button from './components/Button';
 import AxisPad from './components/AxisPad';
 import axios from 'axios';
+import _ from 'lodash';
 
 const [IP, PORT] = ["10.0.0.2", 6969];
 
 export default function App() {
 
 
-  const [connectedDevice, setConnectedDevice] = useState({ip: IP, port: PORT});
+  const [connectedDevice, setConnectedDevice] = useState({ ip: IP, port: PORT });
 
   const [controls, setControls] = useState({
     max_speed: 1,
@@ -31,17 +32,16 @@ export default function App() {
       const url = `http://${connectedDevice.ip}:${connectedDevice.port}`;
       axios.get(`${url}/api/stats`)
         .then(res => {
-          setControls({...controls, l_speed: res.data.l_speed, r_speed: res.data.r_speed, distance: res.data.distance, l_pwm: res.data.l_pwm, r_pwm: res.data.r_pwm });
+          setControls({ ...controls, l_speed: res.data.l_speed, r_speed: res.data.r_speed, distance: res.data.distance, l_pwm: res.data.l_pwm, r_pwm: res.data.r_pwm });
           setConnected(true);
         })
         .catch(err => {
           console.log(err);
           setConnected(false);
         });
-        axios.post(`${url}/api/controls`, {deviation_angle: controls.angle, desired_speed: controls.speed});
-    }, 50);
+    }, 100);
     return () => clearInterval(interval);
-  }, [controls]);
+  }, []);
 
 
   return (
@@ -76,7 +76,7 @@ export default function App() {
         </View>
       </View>
       <View style={{ flex: 0.15 }}>
-        <Text style={styles.titleText} >{connected ? `Connected to ${connectedDevice.ip}:${connectedDevice.port}`: "Connection Failed" }</Text>
+        <Text style={styles.titleText} >{connected ? `Connected to ${connectedDevice.ip}:${connectedDevice.port}` : "Connection Failed"}</Text>
       </View>
       <View style={{ flex: 0.3 }}>
         <Button title='   STOP   ' />
@@ -85,14 +85,19 @@ export default function App() {
         <AxisPad
           resetOnRelease={true}
           autoCenter={true}
-          onValue={({ x, y }) => {
-            y = -y;
-            var magnitude = Math.sqrt(x * x + y * y);
-            var angle = Math.atan2(x, y) * 180 / Math.PI;
-            magnitude = magnitude > 1 ? 1 : magnitude;
-            angle = (x == 0 && y == 0) ? 0 : angle;
-            setControls({ ...controls, angle: angle, speed: magnitude * controls.max_speed });
-          }}>
+          onValue={
+            _.debounce(
+              ({ x, y }) => {
+                y = -y;
+                var magnitude = Math.sqrt(x * x + y * y);
+                var angle = Math.atan2(x, y) * 180 / Math.PI;
+                magnitude = magnitude > 1 ? 1 : magnitude;
+                angle = (x == 0 && y == 0) ? 0 : angle;
+                setControls({ ...controls, angle: angle, speed: magnitude * controls.max_speed });
+                const url = `http://${connectedDevice.ip}:${connectedDevice.port}`;
+                axios.post(`${url}/api/controls`, {deviation_angle: controls.angle, desired_speed: controls.speed});
+              }, 100)
+          }>
         </AxisPad>
       </View>
       <StatusBar style="auto" />
