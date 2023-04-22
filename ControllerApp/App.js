@@ -7,7 +7,7 @@ import AxisPad from './components/AxisPad';
 import axios from 'axios';
 import _ from 'lodash';
 
-const [IP, PORT] = ["10.0.0.2", 6969];
+const [IP, PORT] = ["10.194.136.6", 6969];
 
 export default function App() {
 
