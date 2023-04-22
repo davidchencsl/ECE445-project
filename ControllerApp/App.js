@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, Image } from 'react-native';
-import { ListItem } from 'react-native-elements'
+import { Slider } from 'react-native-elements'
 import Button from './components/Button';
 import AxisPad from './components/AxisPad';
 import axios from 'axios';
@@ -15,7 +15,8 @@ export default function App() {
 
   const [controls, setControls] = useState({
     angle: 0,
-    speed: 0
+    speed: 0,
+    max_speed: 1
   });
 
   const [stats, setStats] = useState({
@@ -24,12 +25,11 @@ export default function App() {
     distance: 0,
     l_pwm: 0,
     r_pwm: 0,
-    max_speed: 1,
     connected: false
   });
 
   const [mode, setMode] = useState('MANUAL');
-  const [frame, setFrame] = useState('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAzCAYAAAA6oTAqAAAAEXRFWHRTb2Z0d2FyZQBwbmdjcnVzaEB1SfMAAABQSURBVGje7dSxCQBACARB+2/ab8BEeQNhFi6WSYzYLYudDQYGBgYGBgYGBgYGBgYGBgZmcvDqYGBgmhivGQYGBgYGBgYGBgYGBgYGBgbmQw+P/eMrC5UTVAAAAABJRU5ErkJggg==');
+  const [frame, setFrame] = useState('iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAADMElEQVR4nOzVwQnAIBQFQYXff81RUkQCOyDj1YOPnbXWPmeTRef');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,7 +61,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={{ flex: 0.1 }}></View>
-      <View style={{ flex: 0.1 }}>
+      <View style={{ flex: 0.07 }}>
         <Text style={styles.titleText}>AutoLUG</Text>
       </View>
       <View style={{ flex: 0.45, width: '100%' }}>
@@ -73,27 +73,32 @@ export default function App() {
         <Text style={styles.titleText}>L PWM: {stats.l_pwm}</Text>
         <Text style={styles.titleText}>R PWM: {stats.r_pwm}</Text>
         <View style={{ flexDirection: 'row' }}>
-          <Text style={styles.titleText}>Max Speed (m/s): </Text>
-          <TextInput
-            style={[styles.titleText, { backgroundColor: 'lightgray', borderRadius: 5 }]}
-            placeholder={"Enter Max Speed"}
-            onChangeText={(text) => {
-              var speed = 0;
-              if (isNaN(text))
-                speed = 0;
-              speed = parseFloat(text);
-              if (speed < 0 || speed > 2)
-                speed = 0;
-              setStats({ ...stats, max_speed: speed })
-            }}
-          />
+          <View style={{ flexGrow: 0.8, width: 150}}>
+            <Text style={styles.titleText}>Max Speed (m/s): {controls.max_speed.toFixed(1)}</Text>
+          </View>
+          <View style={{width: 150, bottom: 6}}>
+            <Slider
+              value={1}
+              onValueChange={(value) => { setControls({ ...controls, max_speed: value }) }}
+              maximumValue={5}
+              minimumValue={0}
+              step={0.1}
+              allowTouchTrack
+              trackStyle={{ height: 5, width: 150 }}
+              thumbStyle={{ height: 20, width: 20, backgroundColor: 'grey' }}
+            />
+          </View>
         </View>
       </View>
       <View style={{ flex: 0.1 }}>
         <Text style={styles.titleText} >{stats.connected ? `Connected to ${connectedDevice.ip}:${connectedDevice.port}` : "Connection Failed"}</Text>
       </View>
       <View style={{ flex: 0.15 }}>
-        <Button title='   STOP   ' />
+        <Button title='   STOP   ' 
+          onPress={() => {
+            axios.post(`http://${connectedDevice.ip}:${connectedDevice.port}/api/stop`, {});
+          }}
+        />
       </View>
       <View style={{ flex: 0.15 }}>
         <Button title={`${mode}`}
@@ -115,8 +120,8 @@ export default function App() {
                   var angle = Math.atan2(x, y) * 180 / Math.PI;
                   magnitude = magnitude > 1 ? 1 : magnitude;
                   angle = (x == 0 && y == 0) ? 0 : angle;
-                  speed = magnitude * stats.max_speed;
-                  setControls({ angle: angle, speed: speed });
+                  speed = magnitude * controls.max_speed;
+                  setControls({ ...controls, angle: angle, speed: speed });
                   postControls.current(angle, speed);
                 }
               }>
@@ -124,9 +129,9 @@ export default function App() {
           </View>
           :
           <View style={{ flex: 0.8 }}>
-            <Image 
-              style={{width: 512, height: 512}}
-              source={{ uri: frame }}
+            <Image
+              style={{ width: 380, height: 380, borderRadius: 20 }}
+              source={{ uri: `data:image/jpeg;base64,${frame}` }}
             />
           </View>
       }
