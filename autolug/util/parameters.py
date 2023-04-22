@@ -1,5 +1,8 @@
 ENC1 = 11
 ENC2 = 13
+TOF_IN = 16
+TOF_OUT = 12
+
 
 I2C_ADDR = 0x08
 

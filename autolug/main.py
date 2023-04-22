@@ -1,12 +1,14 @@
+from dataclasses import dataclass
 from simple_pid import PID
 from control.motor import Motor
 from control.encoder import Encoder
 from control.controller import Controller
+from control.tof import TOF
 from util.parameters import *
 import Jetson.GPIO as GPIO
 import time
 import threading
-from multiprocessing import Process
+from multiprocessing import Process, Value
 from smbus2 import SMBus
 from flask import Flask, request
 import json
@@ -14,40 +16,47 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-desired_speed = 1.0
-deviation_angle = 0.0
+
+desired_speed = Value('f', 0.0)
+deviation_angle = Value('f', 0.0)
+l_speed = Value('f', 0.0)
+r_speed = Value('f', 0.0)
+l_pwm = Value('i', 0)
+r_pwm = Value('i', 0)
+distance = Value('f', 0.0)
 stop_flag = False
+
 app = Flask(__name__)
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    return json.dumps({'l_speed': 0.5,
-                        'r_speed': 0.5,
-                        'l_pwm': 129,
-                        'r_pwm': 129,
-                        'distance': 0.5,
+    return json.dumps({'l_speed': l_speed.value,
+                        'r_speed': r_speed.value,
+                        'l_pwm': l_pwm.value,
+                        'r_pwm': r_pwm.value,
+                        'distance': distance.value,
                        })
 
 @app.route('/api/controls', methods=['POST'])
 def set_controls():
     data = request.json
-    print(data)
+    desired_speed.value = data['desired_speed']
+    deviation_angle.value = data['deviation_angle']
     return 'OK'
+    
 
 def keyboard_thread():
     global stop_flag
-    global desired_speed
-    global deviation_angle
     while True:
         key = input()
         if key == 'q':
             stop_flag = True
             break
         elif key.startswith('a'):
-            deviation_angle = float(key[1:])
+            deviation_angle.value = float(key[1:])
             print(f"deviation angle: {deviation_angle}")
         elif key.startswith('s'):
-            desired_speed = float(key[1:])
+            desired_speed.value = float(key[1:])
             print(f"desired speed: {desired_speed}")
 
 def update_speed_i2c(bus, speed_left, speed_right):
@@ -55,6 +64,15 @@ def update_speed_i2c(bus, speed_left, speed_right):
     bus.write_byte(I2C_ADDR, speed_right)
     return bus.read_byte(I2C_ADDR), bus.read_byte(I2C_ADDR)
 
+def controller_loop(controller, i2c_bus):
+    l_speedv, r_speedv, l_pwmv, r_pwmv, distancev = controller.update(deviation_angle.value, desired_speed.value)
+    l_speed.value = l_speedv
+    r_speed.value = r_speedv
+    l_pwm.value = l_pwmv
+    r_pwm.value = r_pwmv
+    distance.value = distancev
+    print(f"l_speed: {l_speedv}, r_speed: {r_speedv}, l_pwm: {l_pwmv}, r_pwm: {r_pwmv}, distance: {distancev}")
+    update_speed_i2c(i2c_bus, l_pwmv, r_pwmv)
 
 def main():
     GPIO.setmode(GPIO.BOARD)
@@ -64,11 +82,13 @@ def main():
     encoder_left = Encoder(1, ENC1)
     encoder_right = Encoder(2, ENC2)
 
-    controller = Controller(motor_left, motor_right, encoder_left, encoder_right)
+    tof = TOF(1, TOF_IN, TOF_OUT)
+
+    controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.5)
 
     # set speed according to bounding box [m/s]
-    motor_left.set_speed(0.5)
-    motor_right.set_speed(0.5)
+    motor_left.set_speed(0)
+    motor_right.set_speed(0)
 
     bus = SMBus(1)
     threading.Thread(target=keyboard_thread).start()
@@ -76,11 +96,7 @@ def main():
     server.start()
 
     while True:
-    
-        l_pwm, r_pwm = controller.update(deviation_angle, desired_speed)
-        print(f"left pwm: {l_pwm:03}, right pwm: {r_pwm:03}, deviation angle: {deviation_angle:03}, desired speed: {desired_speed:03}")
-        update_speed_i2c(bus, l_pwm, r_pwm)
-        
+        controller_loop(controller, bus)
         if stop_flag:
             break
         time.sleep(0.05)
@@ -89,6 +105,7 @@ def main():
     update_speed_i2c(bus, 0, 0)
     encoder_left.stop()
     encoder_right.stop()
+    tof.stop()
     bus.close()
     server.terminate()
     GPIO.cleanup()
