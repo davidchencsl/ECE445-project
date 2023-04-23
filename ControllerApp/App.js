@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, Image } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Image, TouchableWithoutFeedback } from 'react-native';
 import { Slider } from 'react-native-elements'
 import Button from './components/Button';
 import AxisPad from './components/AxisPad';
 import axios from 'axios';
 import _ from 'lodash';
 
-const [IP, PORT] = ["10.194.136.6", 6969];
+const [IP, PORT] = ["10.0.0.2", 6969];
+//const [IP, PORT] = ["10.194.136.6", 6969];
 
 export default function App() {
 
@@ -27,6 +28,8 @@ export default function App() {
     r_pwm: 0,
     connected: false
   });
+
+  const [bbox, setBBox] = useState([0, 0, 0, 0]);
 
   const [mode, setMode] = useState('MANUAL');
   const [frame, setFrame] = useState('iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAADMElEQVR4nOzVwQnAIBQFQYXff81RUkQCOyDj1YOPnbXWPmeTRef');
@@ -52,10 +55,16 @@ export default function App() {
     return () => clearInterval(interval);
   }, [mode]);
 
+  useEffect(() => {
+    if (bbox[3] != 0)
+      axios.post(`http://${connectedDevice.ip}:${connectedDevice.port}/api/bbox`, { bbox: bbox });
+  }, [bbox]);
+
   const postControls = useRef(_.throttle((angle, speed) => {
     const url = `http://${connectedDevice.ip}:${connectedDevice.port}`;
     axios.post(`${url}/api/controls`, { deviation_angle: angle, desired_speed: speed });
   }, 100));
+
 
 
   return (
@@ -73,10 +82,10 @@ export default function App() {
         <Text style={styles.titleText}>L PWM: {stats.l_pwm}</Text>
         <Text style={styles.titleText}>R PWM: {stats.r_pwm}</Text>
         <View style={{ flexDirection: 'row' }}>
-          <View style={{ flexGrow: 0.8, width: 150}}>
+          <View style={{ flexGrow: 0.8, width: 150 }}>
             <Text style={styles.titleText}>Max Speed (m/s): {controls.max_speed.toFixed(1)}</Text>
           </View>
-          <View style={{width: 150, bottom: 6}}>
+          <View style={{ width: 150, bottom: 6 }}>
             <Slider
               value={1}
               onValueChange={(value) => { setControls({ ...controls, max_speed: value }) }}
@@ -94,7 +103,7 @@ export default function App() {
         <Text style={styles.titleText} >{stats.connected ? `Connected to ${connectedDevice.ip}:${connectedDevice.port}` : "Connection Failed"}</Text>
       </View>
       <View style={{ flex: 0.15 }}>
-        <Button title='   STOP   ' 
+        <Button title='   STOP   '
           onPress={() => {
             axios.post(`http://${connectedDevice.ip}:${connectedDevice.port}/api/stop`, {});
           }}
@@ -129,11 +138,26 @@ export default function App() {
           </View>
           :
           <View style={{ flex: 0.8 }}>
-            <Image
-              style={{ width: 380, height: 380, borderRadius: 20 }}
-              source={{ uri: `data:image/jpeg;base64,${frame}` }}
-            />
-          </View>
+            <TouchableWithoutFeedback onPress={(e) => {
+              const { locationX, locationY } = e.nativeEvent;
+              if (bbox[3] != 0) {
+                setBBox([0, 0, 0, 0]);
+              } else if (bbox[1] == 0) {
+                setBBox([locationX, locationY, 0, 0]);
+              } else {
+                setBBox([bbox[0], bbox[1], locationX, locationY]);
+              }
+            }}>
+              <View>
+                <Image
+                  style={{ width: 380, height: 380, borderRadius: 20 }}
+                  source={{ uri: `data:image/jpeg;base64,${frame}` }}
+                />
+                <View style={{ display: bbox[3] != 0 ? 'flex' : 'none', top: bbox[1], left: bbox[0], width: bbox[2]-bbox[0], height: bbox[3]-bbox[1], borderWidth: 3, position: "absolute" }}>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View >
       }
       <StatusBar style="auto" />
     </View >
@@ -154,5 +178,5 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 20,
     fontWeight: 'bold',
-  },
+  }
 });
