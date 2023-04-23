@@ -9,7 +9,7 @@ from util.parameters import *
 import Jetson.GPIO as GPIO
 import time
 import threading
-from multiprocessing import Manager, Process, Value
+from multiprocessing import Manager, Process, Value, Array
 from ctypes import c_char_p
 from smbus2 import SMBus
 from flask import Flask, request
@@ -29,6 +29,8 @@ distance = Value('f', 0.0)
 stop_flag = False
 manager = Manager()
 frame_base64 = manager.Value(c_char_p, "")
+bbox = Array('f', [0, 0, 0, 0])
+track_status = Value('i', 0)
 ### ENDS ###
 
 app = Flask(__name__)
@@ -47,6 +49,13 @@ def set_controls():
     data = request.json
     desired_speed.value = data['desired_speed']
     deviation_angle.value = data['deviation_angle']
+    return 'OK'
+
+@app.route('/api/bbox', methods=['POST'])
+def set_bbox():
+    data = request.json['bbox']
+    for i in range(4):
+        bbox[i] = data[i]
     return 'OK'
 
 @app.route('/api/camera', methods=['GET'])
@@ -99,7 +108,7 @@ def main():
 
     controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.5)
 
-    tracker = Tracker()
+    tracker = Tracker(bbox, frame_base64, track_status)
 
     # set speed according to bounding box [m/s]
     motor_left.set_speed(0)
