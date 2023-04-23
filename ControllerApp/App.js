@@ -9,6 +9,8 @@ import _ from 'lodash';
 
 const [IP, PORT] = ["10.0.0.2", 6969];
 //const [IP, PORT] = ["10.194.136.6", 6969];
+const IMG_WIDTH = 380;
+const IMG_HEIGHT = 380 * 9 / 16;
 
 export default function App() {
 
@@ -56,16 +58,16 @@ export default function App() {
   }, [mode]);
 
   useEffect(() => {
-    if (bbox[3] != 0)
-      axios.post(`http://${connectedDevice.ip}:${connectedDevice.port}/api/bbox`, { bbox: bbox });
+    if (bbox[3] != 0) {
+      const normalized_bbox = [bbox[0] / IMG_WIDTH, bbox[1] / IMG_HEIGHT, bbox[2] / IMG_WIDTH, bbox[3] / IMG_HEIGHT];
+      axios.post(`http://${connectedDevice.ip}:${connectedDevice.port}/api/bbox`, { bbox: normalized_bbox });
+    }
   }, [bbox]);
 
   const postControls = useRef(_.throttle((angle, speed) => {
     const url = `http://${connectedDevice.ip}:${connectedDevice.port}`;
     axios.post(`${url}/api/controls`, { deviation_angle: angle, desired_speed: speed });
   }, 100));
-
-
 
   return (
     <View style={styles.container}>
@@ -150,7 +152,7 @@ export default function App() {
             }}>
               <View>
                 <Image
-                  style={{ width: 380, height: 380, borderRadius: 20 }}
+                  style={{ width: IMG_WIDTH, height: IMG_HEIGHT, borderRadius: 20 }}
                   source={{ uri: `data:image/jpeg;base64,${frame}` }}
                 />
                 <View style={{ display: bbox[3] != 0 ? 'flex' : 'none', top: bbox[1], left: bbox[0], width: bbox[2]-bbox[0], height: bbox[3]-bbox[1], borderWidth: 3, position: "absolute" }}>
