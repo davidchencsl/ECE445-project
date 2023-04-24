@@ -2,13 +2,69 @@ import cv2
 import base64
 from multiprocessing import Process, Value
 import time
+import pyqrcode
+import numpy as np
 
-def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_angle):
-    video = cv2.VideoCapture(camera)
+def register_owner(owner_id):
+    img = pyqrcode.create(owner_id)
+    img.png(owner_id + '.png', scale=8)
+    img.show()
+
+def tracking_loop_QR(camera, owner_id, frame_base64, track_status, deviation_angle):
+    def calc_deviation_angle(bbox, size):
+        x, y = bbox
+        width, height = size
+        return (x - width / 2) / width * 90
+
+    decoder = cv2.QRCodeDetector()
+    vid = cv2.VideoCapture(camera)
+    
+    IMG_WIDTH = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+    IMG_HEIGHT = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    TRACKING_PERIOD = 10
+
+    # iterative variables
+    count = 0
+    cur_dev = 0
+    tracking_status = False
+
     while True:
-        ret, frame = video.read()
+        count += 1
+        ret, frame = vid.read()
         frame = cv2.rotate(frame, cv2.ROTATE_180)
-        # TODO: Add QR code detection here
+        data, info, points, _ = decoder.detectAndDecodeMulti(frame)
+
+        if points is not None:
+            for de_qr_code in info:
+                if de_qr_code == owner_id:
+                    # owner (owner_id) found at (center)
+                    tracking_status = True
+                    index = info.index(owner_id)
+                    points = points[index]
+                    center = np.array(points).mean(axis=0)
+                    
+                    # calculate deviation angle
+                    cur_dev = calc_deviation_angle(center, (IMG_WIDTH, IMG_HEIGHT))
+
+                    # draw boudning box around the owner QR code
+                    for i in range(len(points)):
+                        pt1 = [int(val) for val in points[i]]
+                        pt2 = [int(val) for val in points[(i + 1) % 4]]
+                        cv2.line(frame, pt1, pt2, color=(255, 0, 0), thickness=3)
+
+        # update tracker with the most non-zero deviation during the TRACKING_PERIOD to stablize tracking
+        if count == TRACKING_PERIOD:
+            count = 0
+            deviation_angle.value = cur_dev 
+            if tracking_status:
+                # tracker found the owner
+                tracking_status = False
+                cur_dev = 0
+                pass
+            else:
+                # owner lost!
+                pass
+
         frame_base64.value = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode("utf-8")
 
 def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle):
