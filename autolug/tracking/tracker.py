@@ -2,15 +2,16 @@ import cv2
 import base64
 from multiprocessing import Process, Value
 import time
-import pyqrcode
-import numpy as np
 
+import numpy as np
+'''
 def register_owner(owner_id):
     img = pyqrcode.create(owner_id)
     img.png(owner_id + '.png', scale=8)
     img.show()
+'''
 
-def tracking_loop_QR(camera, owner_id, frame_base64, track_status, deviation_angle):
+def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_angle, desired_speed, owner_id="abcd"):
     def calc_deviation_angle(bbox, size):
         x, y = bbox
         width, height = size
@@ -21,7 +22,7 @@ def tracking_loop_QR(camera, owner_id, frame_base64, track_status, deviation_ang
     
     IMG_WIDTH = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
     IMG_HEIGHT = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    TRACKING_PERIOD = 10
+    TRACKING_PERIOD = 1
 
     # iterative variables
     count = 0
@@ -50,12 +51,15 @@ def tracking_loop_QR(camera, owner_id, frame_base64, track_status, deviation_ang
                     for i in range(len(points)):
                         pt1 = [int(val) for val in points[i]]
                         pt2 = [int(val) for val in points[(i + 1) % 4]]
+                        pt1 = tuple(pt1)
+                        pt2 = tuple(pt2)
                         cv2.line(frame, pt1, pt2, color=(255, 0, 0), thickness=3)
 
         # update tracker with the most non-zero deviation during the TRACKING_PERIOD to stablize tracking
         if count == TRACKING_PERIOD:
             count = 0
             deviation_angle.value = cur_dev 
+            desired_speed.value = 0.5
             if tracking_status:
                 # tracker found the owner
                 tracking_status = False
@@ -67,7 +71,7 @@ def tracking_loop_QR(camera, owner_id, frame_base64, track_status, deviation_ang
 
         frame_base64.value = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode("utf-8")
 
-def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle):
+def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle, desired_speed):
     def scale_bbox(bbox_shared, size):
         bbox = [b for b in bbox_shared]
         bbox[0] *= size[0]
@@ -86,7 +90,7 @@ def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_ang
     video = cv2.VideoCapture(camera)
     IMG_WIDTH = video.get(cv2.CAP_PROP_FRAME_WIDTH)
     IMG_HEIGHT = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    tracker = cv2.legacy.TrackerCSRT_create()
+    tracker = cv2.TrackerCSRT_create()
     while True:
         ret, frame = video.read()
         frame = cv2.rotate(frame, cv2.ROTATE_180)
@@ -110,7 +114,7 @@ def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_ang
 
 
 
-def tracking_loop_debug(camera, bbox, frame_base64, track_status, deviation_angle):
+def tracking_loop_debug(camera, bbox, frame_base64, track_status, deviation_angle, desired_speed):
     video = cv2.VideoCapture(camera)
     while True:
         ret, frame = video.read()
@@ -125,7 +129,8 @@ class Tracker:
         self.bbox = bbox_input
         self.track_status = track_status
         self.deviation_angle = Value('f', 0.0)
-        self.thread = Process(target=tracking_loop, args=(self.camera, self.bbox, self.frame_base64, self.track_status, self.deviation_angle))
+        self.desired_speed = Value('f', 0.0)
+        self.thread = Process(target=tracking_loop_QR, args=(self.camera, self.bbox, self.frame_base64, self.track_status, self.deviation_angle, self.desired_speed))
         self.thread.start()
 
     def stop(self):
@@ -136,3 +141,6 @@ class Tracker:
     
     def get_deviation_angle(self):
         return self.deviation_angle.value
+    
+    def get_desired_speed(self):
+        return self.desired_speed.value

@@ -31,6 +31,7 @@ manager = Manager()
 frame_base64 = manager.Value(c_char_p, "")
 bbox = Array('f', [0, 0, 0, 0])
 track_status = Value('i', 0)
+mode = Value('i', 0)
 ### ENDS ###
 
 app = Flask(__name__)
@@ -49,6 +50,7 @@ def set_controls():
     data = request.json
     desired_speed.value = data['desired_speed']
     deviation_angle.value = data['deviation_angle']
+    mode.value = 0
     return 'OK'
 
 @app.route('/api/bbox', methods=['POST'])
@@ -60,6 +62,7 @@ def set_bbox():
 
 @app.route('/api/camera', methods=['GET'])
 def get_camera():
+    mode.value = 1
     return json.dumps({'image': frame_base64.value}) 
 
 def keyboard_thread():
@@ -92,7 +95,7 @@ def controller_loop(controller, i2c_bus):
     l_pwm.value = l_pwmv
     r_pwm.value = r_pwmv
     distance.value = distancev
-    #print(f"l_speed: {l_speedv}, r_speed: {r_speedv}, l_pwm: {l_pwmv}, r_pwm: {r_pwmv}, distance: {distancev}")
+    print(f"angle: {deviation_angle.value}, speed: {desired_speed.value}")
     update_speed_i2c(i2c_bus, l_pwmv, r_pwmv)
 
 def main():
@@ -120,6 +123,10 @@ def main():
     server.start()
 
     while True:
+        if mode.value == 1:
+            deviation_angle.value = tracker.get_deviation_angle()
+            desired_speed.value = tracker.get_desired_speed()
+            
         controller_loop(controller, bus)
         frame_base64.value = tracker.get_frame_base64()
         if stop_flag:

@@ -8,7 +8,7 @@ class Motor():
         self.id = id
         self.target_speed = 0
         self.current_speed = 0
-        self.pid = PID(1000, 10.0, 1.00, setpoint=0)
+        self.pid = PID(1000, 400.0, 100.00, setpoint=0)
     
     def set_speed(self, speed):
         self.target_speed = speed
