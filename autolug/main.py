@@ -21,6 +21,7 @@ log.setLevel(logging.ERROR)
 ### GLOBALS ###
 desired_speed = Value('f', 0.0)
 deviation_angle = Value('f', 0.0)
+max_speed = Value('f', 0.0)
 l_speed = Value('f', 0.0)
 r_speed = Value('f', 0.0)
 l_pwm = Value('i', 0)
@@ -33,6 +34,9 @@ bbox = Array('f', [0, 0, 0, 0])
 track_status = Value('i', 0)
 mode = Value('i', 0)
 ### ENDS ###
+
+MODE_MANUAL = 0
+MODE_AUTO = 1
 
 app = Flask(__name__)
 
@@ -50,6 +54,7 @@ def set_controls():
     data = request.json
     desired_speed.value = data['desired_speed']
     deviation_angle.value = data['deviation_angle']
+    max_speed.value = data['max_speed']
     mode.value = 0
     return 'OK'
 
@@ -111,7 +116,7 @@ def main():
 
     controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.5)
 
-    tracker = Tracker(bbox, frame_base64, track_status)
+    tracker = Tracker(bbox, frame_base64, track_status, max_speed)
 
     # set speed according to bounding box [m/s]
     motor_left.set_speed(0)
@@ -123,7 +128,7 @@ def main():
     server.start()
 
     while True:
-        if mode.value == 1:
+        if mode.value == MODE_AUTO:
             deviation_angle.value = tracker.get_deviation_angle()
             desired_speed.value = tracker.get_desired_speed()
             

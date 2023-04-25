@@ -64,9 +64,9 @@ export default function App() {
     }
   }, [bbox]);
 
-  const postControls = useRef(_.throttle((angle, speed) => {
+  const postControls = useRef(_.throttle((angle, speed, max_speed) => {
     const url = `http://${connectedDevice.ip}:${connectedDevice.port}`;
-    axios.post(`${url}/api/controls`, { deviation_angle: angle, desired_speed: speed });
+    axios.post(`${url}/api/controls`, { deviation_angle: angle, desired_speed: speed, max_speed: max_speed });
   }, 100));
 
   return (
@@ -114,6 +114,9 @@ export default function App() {
       <View style={{ flex: 0.15 }}>
         <Button title={`${mode}`}
           onPress={() => {
+            if (mode != 'MANUAL') {
+              postControls.current(0, 0, controls.max_speed);
+            }
             setMode(mode == 'MANUAL' ? '   AUTO   ' : 'MANUAL');
           }}
         />
@@ -133,7 +136,7 @@ export default function App() {
                   angle = (x == 0 && y == 0) ? 0 : angle;
                   speed = magnitude * controls.max_speed;
                   setControls({ ...controls, angle: angle, speed: speed });
-                  postControls.current(angle, speed);
+                  postControls.current(angle, speed, controls.max_speed);
                 }
               }>
             </AxisPad>
