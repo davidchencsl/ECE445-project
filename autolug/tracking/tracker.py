@@ -22,10 +22,12 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
     
     IMG_WIDTH = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
     IMG_HEIGHT = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    TRACKING_PERIOD = 1
+    LOST_PERIOD = 10
+    track_status.value = 0
+    found_obj = False
 
     # iterative variables
-    count = 0
+    lost_count = 0
     cur_dev = 0
 
     while True:
@@ -38,7 +40,7 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
             for de_qr_code in info:
                 if de_qr_code == owner_id:
                     # owner (owner_id) found at (center)
-                    track_status.value = 1
+                    found_obj = True
                     index = info.index(owner_id)
                     points = points[index]
                     center = np.array(points).mean(axis=0)
@@ -54,21 +56,20 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
                         pt2 = tuple(pt2)
                         cv2.line(frame, pt1, pt2, color=(255, 0, 0), thickness=3)
 
-        # update tracker with the most non-zero deviation during the TRACKING_PERIOD to stablize tracking
-        if count == TRACKING_PERIOD:
-            count = 0
-            if track_status.value:
-                # tracker found the owner
+        if found_obj:
+            # tracker found the owner
+            found_obj = False
+            deviation_angle.value = cur_dev 
+            desired_speed.value = max_speed.value
+            track_status.value = 1
+            lost_count = 0
+        else:
+            # owner lost!
+            lost_count += 1
+            if lost_count > LOST_PERIOD:
                 track_status.value = 0
-                deviation_angle.value = cur_dev 
-                desired_speed.value = max_speed.value
-                cur_dev = 0   
-            else:
-                # owner lost!
-                # TODO: Perform Recovery
-                deviation_angle.value = 0
-                desired_speed.value = 0
 
+        cur_dev = 0
         frame_base64.value = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode("utf-8")
 
 def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle, desired_speed, max_speed):

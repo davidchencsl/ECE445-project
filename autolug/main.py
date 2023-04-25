@@ -128,9 +128,13 @@ def main():
     server.start()
 
     while True:
-        if mode.value == MODE_AUTO:
+        if mode.value == MODE_AUTO and track_status.value == 1:
             deviation_angle.value = tracker.get_deviation_angle()
             desired_speed.value = tracker.get_desired_speed()
+        
+        if mode.value == MODE_AUTO and track_status.value == 0:
+            deviation_angle.value = 80
+            desired_speed.value = 0.5
             
         controller_loop(controller, bus)
         frame_base64.value = tracker.get_frame_base64()
