@@ -59,13 +59,15 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
             xmin, ymin, width, height = cv2.boundingRect(cnt)
             extent = area / (width * height)
         
-        # filter non-rectangular objects and small objects
-        if (extent > np.pi / 4) and (area > 100):
-            bboxes.append((xmin, ymin, xmin + width, ymin + height))
+            # filter non-rectangular objects and small objects
+            if (extent > np.pi / 4) and (area > 2000):
+                bboxes.append((xmin, ymin, xmin + width, ymin + height))
 
         for xmin, ymin, xmax, ymax in bboxes:
             roi = frame[ymin:ymax, xmin:xmax]
             data, _, _ = decoder.detectAndDecode(roi)
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+            print(data)
             points = [[xmin,ymin],[xmin,ymax],[xmax,ymin],[xmax,ymax]]
             if data == owner_id:
                 found_obj = True
@@ -101,7 +103,6 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
 def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle, desired_speed, max_speed):
     def scale_bbox(bbox_shared, size):
         bbox = [b for b in bbox_shared]
-        print(size)
         bbox[0] *= size[0]
         bbox[1] *= size[1]
         bbox[2] *= size[0]
@@ -110,7 +111,6 @@ def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_ang
         y = (bbox[1] + bbox[3])/2 - 180
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
-        print(x,y,w,h)
         return (x,y,w,h)
 
     def calc_deviation_angle(bbox, size):
@@ -135,6 +135,8 @@ def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_ang
         if init:
             if track_status.value == INACTIVE:
                 bbox = scale_bbox(bbox_shared, (IMG_WIDTH, IMG_HEIGHT))
+                tracker.clear()
+                tracker = cv2.TrackerCSRT_create()
                 tracker.init(frame, bbox)
                 track_status.value = ACTIVE
             elif track_status.value == ACTIVE:
