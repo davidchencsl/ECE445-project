@@ -47,42 +47,29 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
         ret, frame = vid.read()
         #frame = cv2.rotate(frame, cv2.ROTATE_180)
         frame = tilt_correction(frame, 0)
-        # frame preprocess
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        kernel = np.ones((3, 3), np.uint8)
-        thresh = cv2.dilate(thresh, kernel, iterations=1)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        bboxes = []
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            xmin, ymin, width, height = cv2.boundingRect(cnt)
-            extent = area / (width * height)
-        
-            # filter non-rectangular objects and small objects
-            if (extent > np.pi / 4) and (area > 2000):
-                bboxes.append((xmin, ymin, xmin + width, ymin + height))
 
-        for xmin, ymin, xmax, ymax in bboxes:
-            roi = frame[ymin:ymax, xmin:xmax]
-            data, _, _ = decoder.detectAndDecode(roi)
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-            print(data)
-            points = [[xmin,ymin],[xmin,ymax],[xmax,ymin],[xmax,ymax]]
-            if data == owner_id:
-                found_obj = True
-                center = [int(xmin+xmax/2), int(ymin+ymax)]
-                
-                # calculate deviation angle
-                cur_dev = calc_deviation_angle(center, (IMG_WIDTH, IMG_HEIGHT))
+        data, points, _ = decoder.detectAndDecode(frame)
 
-                # draw boudning box around the owner QR code
-                for i in range(len(points)):
-                    pt1 = [int(val) for val in points[i]]
-                    pt2 = [int(val) for val in points[(i + 1) % 4]]
-                    pt1 = tuple(pt1)
-                    pt2 = tuple(pt2)
-                    cv2.line(frame, pt1, pt2, color=(255, 0, 0), thickness=3)
+        if points is not None:
+            #for de_qr_code in info:
+                if data == owner_id:
+                    # owner (owner_id) found at (center)
+                    found_obj = True
+                    #index = info.index(owner_id)
+                    #points = points[index]
+                    points = points[0]
+                    center = np.array(points).mean(axis=0)
+                    
+                    # calculate deviation angle
+                    cur_dev = calc_deviation_angle(center, (IMG_WIDTH, IMG_HEIGHT))
+
+                    # draw boudning box around the owner QR code
+                    for i in range(len(points)):
+                        pt1 = [int(val) for val in points[i]]
+                        pt2 = [int(val) for val in points[(i + 1) % 4]]
+                        pt1 = tuple(pt1)
+                        pt2 = tuple(pt2)
+                        cv2.line(frame, pt1, pt2, color=(255, 0, 0), thickness=3)
 
         if found_obj:
             # tracker found the owner
