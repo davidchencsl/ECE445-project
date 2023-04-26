@@ -15,14 +15,27 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
     def calc_deviation_angle(bbox, size):
         x, y = bbox
         width, height = size
-        return (x - width / 2) / width * 90
+        return (x - width / 2) / width * 45
+    
+    def tilt_correction(frame, angle):
+        angle = np.deg2rad(angle)
+        height, width = frame.shape[:2]
+        src_points = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
+        dst_points = np.float32([
+        [0, height * np.sin(angle)], 
+        [width, height * np.sin(angle)], 
+        [0, height], 
+        [width, height]
+    ])
+        perspective_matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+        return cv2.warpPerspective(frame, perspective_matrix, (width, height))
 
     decoder = cv2.QRCodeDetector()
     vid = cv2.VideoCapture(camera)
     
     IMG_WIDTH = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
     IMG_HEIGHT = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    LOST_PERIOD = 10
+    LOST_PERIOD = 5
     track_status.value = 0
     found_obj = False
 
@@ -31,18 +44,25 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
     cur_dev = 0
 
     while True:
-        count += 1
         ret, frame = vid.read()
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
-        data, info, points, _ = decoder.detectAndDecodeMulti(frame)
+        #frame = cv2.rotate(frame, cv2.ROTATE_180)
+        frame = tilt_correction(frame, 0)
+
+        grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(grey, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        kenerl = np.ones((3,3),np.uint8)
+        frame = cv2.dilate(thresh,kenerl,iterations = 1)
+        
+        data, points, _ = decoder.detectAndDecode(frame)
 
         if points is not None:
-            for de_qr_code in info:
-                if de_qr_code == owner_id:
+            #for de_qr_code in info:
+                if data == owner_id:
                     # owner (owner_id) found at (center)
                     found_obj = True
-                    index = info.index(owner_id)
-                    points = points[index]
+                    #index = info.index(owner_id)
+                    #points = points[index]
+                    points = points[0]
                     center = np.array(points).mean(axis=0)
                     
                     # calculate deviation angle
@@ -75,11 +95,17 @@ def tracking_loop_QR(camera, bbox_shared, frame_base64, track_status, deviation_
 def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_angle, desired_speed, max_speed):
     def scale_bbox(bbox_shared, size):
         bbox = [b for b in bbox_shared]
+        print(size)
         bbox[0] *= size[0]
         bbox[1] *= size[1]
         bbox[2] *= size[0]
         bbox[3] *= size[1]
-        return bbox
+        x = (bbox[0] + bbox[2])/2 - 180
+        y = (bbox[1] + bbox[3])/2 - 180
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        print(x,y,w,h)
+        return (x,y,w,h)
 
     def calc_deviation_angle(bbox, size):
         x, y, w, h = bbox
@@ -88,28 +114,34 @@ def tracking_loop(camera, bbox_shared, frame_base64, track_status, deviation_ang
 
     INACTIVE = 0
     ACTIVE = 1
+    HAS_BBOX = 2
     video = cv2.VideoCapture(camera)
     IMG_WIDTH = video.get(cv2.CAP_PROP_FRAME_WIDTH)
     IMG_HEIGHT = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
     tracker = cv2.TrackerCSRT_create()
+    init = False
     while True:
         ret, frame = video.read()
-        frame = cv2.rotate(frame, cv2.ROTATE_180)
-
-        if track_status.value == INACTIVE:
-            bbox = scale_bbox(bbox_shared, (IMG_WIDTH, IMG_HEIGHT))
-            tracker.init(frame, bbox)
-            track_status.value = ACTIVE
-        elif track_status.value == ACTIVE:
-            ret, bbox = tracker.update(frame)
-            if ret:
-                # Draw the bounding box on the frame
-                x, y, w, h = map(int, bbox)
-                deviation_angle.value = calc_deviation_angle(bbox, (IMG_WIDTH, IMG_HEIGHT))
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            else:
-                # Display a message if tracking fails
-                cv2.putText(frame, "Tracking failed!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        #frame = cv2.rotate(frame, cv2.ROTATE_180)
+        if track_status.value == HAS_BBOX:
+            init = True
+            track_status.value = INACTIVE
+        if init:
+            if track_status.value == INACTIVE:
+                bbox = scale_bbox(bbox_shared, (IMG_WIDTH, IMG_HEIGHT))
+                tracker.init(frame, bbox)
+                track_status.value = ACTIVE
+            elif track_status.value == ACTIVE:
+                ret, bbox = tracker.update(frame)
+                if ret:
+                    # Draw the bounding box on the frame
+                    x, y, w, h = map(int, bbox)
+                    deviation_angle.value = calc_deviation_angle(bbox, (IMG_WIDTH, IMG_HEIGHT))
+                    desired_speed.value = 0.5
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                else:
+                    # Display a message if tracking fails
+                    cv2.putText(frame, "Tracking failed!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         frame_base64.value = base64.b64encode(cv2.imencode('.jpg', frame)[1]).decode("utf-8")
 

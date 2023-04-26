@@ -21,7 +21,7 @@ log.setLevel(logging.ERROR)
 ### GLOBALS ###
 desired_speed = Value('f', 0.0)
 deviation_angle = Value('f', 0.0)
-max_speed = Value('f', 0.0)
+max_speed = Value('f', 0.5)
 l_speed = Value('f', 0.0)
 r_speed = Value('f', 0.0)
 l_pwm = Value('i', 0)
@@ -47,6 +47,7 @@ def get_stats():
                         'l_pwm': l_pwm.value,
                         'r_pwm': r_pwm.value,
                         'distance': distance.value,
+                        'track_status': track_status.value,
                        })
 
 @app.route('/api/controls', methods=['POST'])
@@ -54,8 +55,13 @@ def set_controls():
     data = request.json
     desired_speed.value = data['desired_speed']
     deviation_angle.value = data['deviation_angle']
-    max_speed.value = data['max_speed']
     mode.value = 0
+    return 'OK'
+
+@app.route('/api/max_speed', methods=['POST'])
+def set_max_speed():
+    data = request.json
+    max_speed.value = data['max_speed']
     return 'OK'
 
 @app.route('/api/bbox', methods=['POST'])
@@ -63,6 +69,7 @@ def set_bbox():
     data = request.json['bbox']
     for i in range(4):
         bbox[i] = data[i]
+    track_status.value = 2
     return 'OK'
 
 @app.route('/api/camera', methods=['GET'])
@@ -100,7 +107,7 @@ def controller_loop(controller, i2c_bus):
     l_pwm.value = l_pwmv
     r_pwm.value = r_pwmv
     distance.value = distancev
-    print(f"angle: {deviation_angle.value}, speed: {desired_speed.value}")
+    print(f"angle: {deviation_angle.value}, speed: {desired_speed.value}, status: {track_status.value}")
     update_speed_i2c(i2c_bus, l_pwmv, r_pwmv)
 
 def main():
@@ -114,7 +121,7 @@ def main():
 
     tof = TOF(1, TOF_IN, TOF_OUT)
 
-    controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.5)
+    controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.0)
 
     tracker = Tracker(bbox, frame_base64, track_status, max_speed)
 
@@ -133,8 +140,10 @@ def main():
             desired_speed.value = tracker.get_desired_speed()
         
         if mode.value == MODE_AUTO and track_status.value == 0:
-            deviation_angle.value = 80
-            desired_speed.value = 0.5
+            #deviation_angle.value = 80
+            #desired_speed.value = max_speed.value
+            deviation_angle.value = 0
+            desired_speed.value = 0
             
         controller_loop(controller, bus)
         frame_base64.value = tracker.get_frame_base64()
