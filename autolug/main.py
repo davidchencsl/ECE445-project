@@ -18,6 +18,8 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+import matplotlib.pyplot as plt
+
 ### GLOBALS ###
 desired_speed = Value('f', 0.0)
 deviation_angle = Value('f', 0.0)
@@ -33,6 +35,9 @@ frame_base64 = manager.Value(c_char_p, "")
 bbox = Array('f', [0, 0, 0, 0])
 track_status = Value('i', 0)
 mode = Value('i', 0)
+
+l_speed_list = []
+r_speed_list = []
 ### ENDS ###
 
 MODE_MANUAL = 0
@@ -107,8 +112,12 @@ def controller_loop(controller, i2c_bus):
     l_pwm.value = l_pwmv
     r_pwm.value = r_pwmv
     distance.value = distancev
-    print(f"angle: {deviation_angle.value}, speed: {desired_speed.value}, status: {track_status.value}")
+    #print(f"angle: {deviation_angle.value}, speed: {desired_speed.value}, status: {track_status.value}")
     update_speed_i2c(i2c_bus, l_pwmv, r_pwmv)
+
+    #Plotting
+    l_speed_list.append(l_speedv)
+    r_speed_list.append(r_speedv)
 
 def main():
     global frame_base64
@@ -121,9 +130,9 @@ def main():
 
     tof = TOF(1, TOF_IN, TOF_OUT)
 
-    controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.0)
+    controller = Controller(motor_left, motor_right, encoder_left, encoder_right, tof, safety_distance=0.4)
 
-    tracker = Tracker(bbox, frame_base64, track_status, max_speed)
+    tracker = Tracker(bbox, frame_base64, track_status, max_speed, camera=0)
 
     # set speed according to bounding box [m/s]
     motor_left.set_speed(0)
@@ -160,6 +169,14 @@ def main():
     bus.close()
     server.terminate()
     GPIO.cleanup()
+    
+    plt.plot(l_speed_list, label='left motor measured speed')
+    plt.plot(r_speed_list, label='right motor measured speed')
+    plt.xlabel('iteration')
+    plt.ylabel('speed [m/s]')
+    plt.title('Measured Motor Speed')
+    plt.legend()
+    plt.savefig('motor_speed.png')
 
 
 if __name__ == '__main__':
