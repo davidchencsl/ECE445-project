@@ -1,23 +1,19 @@
 # Lyuxing Lab Notebook
-# Table of contents
+## Table of contents
 1. [Shopping List Confirmed](#Shopping List Confirmed)
 
 
-## 2023-02-14 - Shopping List Confirmed <a name="Shopping List Confirmed"></a>
+## 2023-02-20 - Shopping List Confirmed <a name="Shopping List Confirmed"></a>
 - 20W DC-DC buck converter power module with 7~24V input and 5V/4A output
 - N-channel power MOSFET - 30V / 60A
+- 80 pieces Female to Female Jumper Wires (4 and 8 Inch)
+- 50 pieces Male to Female Jumper Wires (50cm)
+- 1 12V battery
 
-## 2023-02-18 - PCB functionality
-The PCB needs to accomplish the following:
-- accept 12 V battery input
-- provide stable 5V 4A
-- convert two 3.3V PWM inputs into 12V PWM
 
-## 2023-02-19 - Jetson Nano
-Due to the shortage of Raspberry Pi 4, we decided to switch to jetson nano 4G. It costs more and it also has cuda support to run larger model. We will use the yolov4-deepsort project to implement owner tracking: [davidchencsl/yolov4-deepsort: Object tracking implemented with YOLOv4, DeepSort, and TensorFlow. (github.com)](https://github.com/davidchencsl/yolov4-deepsort)
+## 2023-03-28 - PCB Initial Check
+The PCB board order has arrived on 03/28 and an initial check was conducted. After examining the PCB board and the electronic pieces to be soldered, one severe problem has revealed. The planned ESP32 pin layout on the PCB board does not match the ESP32 chip we have. Two solutions have been proposed: we reorder a new PCB board with updated pin layout with the ESP32 chip we have right now, or order additional ESP32 chips with matched pin layout with the PCB board we have right now. We decide to discuss with our TA about this issue before proceeding. 
+![](PCB_unsoldered.jpg)
 
-## 2023-02-25 - PCB Design
-We bought a 24V - 5V buck converter to convert the battery voltage to power the PCB and the Jetson. The plan right now is to use ATTiny85 as the microcontroller. Jetson will send the desired speed data to ATTiny85 through I2C using only 2 pins, and ATTiny85 will output PWM signals to MOSFETS which will be 24V PWM signals that drives the motor.
-
-## 2023-03-10 - Controller
-The controller is implemented in Jetson Nano in python. We have 2 pid controllers that regulates the motor and keep it at the desired speed. We also have an additional controller to control the steering of the robot based on the deviate angles provided by the human identification subsystem.
+## 2023-03-29 - PCB Soldering
+Luckily we were able to obtain a legacy ESP32 from previous semesters' left-overs with matching pin layout as out PCB board.
