@@ -95,4 +95,4 @@ To make the tracking more consistent, we decided to incorporate object tracking 
 
 ## 2023-04-26 - Project Complete
 After some fine-tuning, we officially concluded AutoLug project! The following two videos demonstrate AutoLug's functionalities under manual mode and autonomous tracking mode.
-[![SC2 Video](https://www.youtube.com/embed/hKK-Z66YSt4/0.jpg)](https://www.youtube.com/embed/hKK-Z66YSt4)
+[![DEMO](https://www.youtube.com/embed/hKK-Z66YSt4/0.jpg)](https://www.youtube.com/embed/hKK-Z66YSt4)
