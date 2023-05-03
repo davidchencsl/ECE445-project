@@ -1,9 +1,9 @@
 # Lyuxing Lab Notebook
-# Table of contents
-1. [Shopping List Confirmed](#Shopping List Confirmed)
+## Table of contents
+1. [Shopping List Confirmed](#ShoppingListConfirmed)
 
 
-## <a name="Shopping List Confirmed"></a> 2023-02-20 - Shopping List Confirmed 
+## 2023-02-20 - Shopping List Confirmed <a name="ShoppingListConfirmed"></a> 
 - 20W DC-DC buck converter power module with 7~24V input and 5V/4A output
 - N-channel power MOSFET - 30V / 60A
 - 80 pieces Female to Female Jumper Wires (4 and 8 Inch)
