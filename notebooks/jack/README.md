@@ -1,5 +1,5 @@
 # Lyuxing Lab Notebook
-## Table of contents
+# Table of contents
 1. [Shopping List Confirmed](#Shopping List Confirmed)
 
 
