@@ -8,7 +8,7 @@
     4. [I2C Issue](#2023-04-21---pcb-i2c-issue)
 3. [Drivetrain](#2023-03-28---drivetrain-subsystem-platform-received)
     1. [Platform Received](#2023-03-28---drivetrain-subsystem-platform-received)
-    2. [Platform Assembly](#2023-04-10---drivetrain-subsystem-platform-assembly)
+    2. [Platform Assembly](#2023-04-19---drivetrain-subsystem-platform-assembly)
     3. [Motor Issue](#2023-04-16---drivetrain-subsystem-motor-issue)
     4. [Speed Issue](#2023-04-23---drivetrain-subsystem-speed-issue)
 4. [Human Identification & Tracking](#2023-03-01---human-recognition-subsystem-gait-gait-recognition-algorithm-search)
@@ -17,7 +17,7 @@
         2. [GaitSet Installation](#2023-03-05---human-recognition-subsystem-gait-gaitset-installation)
         3. [GaitSet End-to-end Realization](#2023-03-15---human-recognition-subsystem-gait-gaitset-end-to-end-realization)
         4. [End-to-end Gaitset Accuracy Eval](#2023-04-01---human-recognition-subsystem-gait-end-to-end-gaitset-accuracy-eval)
-        5. [Onboard Testing and Issue](#2023-04-15---human-recognition-subsystem-gait-onboard-testing-and-issue)
+        5. [Onboard Testing and Issue](#2023-04-10---human-recognition-subsystem-gait-onboard-testing-and-issue)
     2. [QR-code Based](#2023-04-20---human-recognition-subsystem-qr-transition-to-qr-code)
         1. [Transition to QR code](#2023-04-20---human-recognition-subsystem-qr-transition-to-qr-code)
         2. [Onboard Testing and Issue](#2023-04-22---human-recognition-subsystem-qr-onboard-testing-and-issue)
@@ -58,12 +58,7 @@ Luckily we were able to obtain a legacy ESP32 from previous semesters' left-over
 To validate accuracy of the end-to-end version of GaitSet, a video stream is used to produce gait silhouette sets used for training. Then, other video streams containing the target are used as inputs to the recognition subsystem and performance is evaluated. Experiments are conducted using the following datasets: KTH (https://www.csc.kth.se/cvap/actions/), Kaggle version (https://www.kaggle.com/datasets/saimadhurivasam/human-activity-recognition-from-video), TUM-Gait (https://www.ce.cit.tum.de/en/mmk/verschiedenes/tum-iitkgp-gait-database/). The overall accuracy achieved is around 82%, which is slightly less than the proposed accuracy in the paper but is decent enoungh. The following images are the training performance of the human recognition subsystem based on GaitSet.
 ![](KTH_30000_loss.jpg)
 
-## 2023-04-10 - Drivetrain Subsystem: Platform Assembly
-Most hardware (electronics, sensors, etc.) have been assembled today. The image below shows the overall appearance of AutoLug.
-![](back_view.PNG)
-![](front_view.PNG)
-
-## 2023-04-15 - Human Recognition Subsystem (Gait): Onboard Testing and Issue
+## 2023-04-10 - Human Recognition Subsystem (Gait): Onboard Testing and Issue
 A severe issue is found when trying to implement the GaiSet based human recognition subsystem on the AutoLug. Since the platform is supposed to be tracking the back of the owner, the back-view gait image is entirely different than the testing case of side-view gait image (which is more informative). Secondly, since the camera is mounted at the bottom of the platform, if the platform is getting too close to the owner it will not be able to capture the entire gait motion and therefore fail to perform identification. 
 
 ## 2023-04-16 - Drivetrain Subsystem: Motor Issue
@@ -72,6 +67,11 @@ We've uploaded the control subsystem to ESP32 and attemped to drive the motor wi
 ## 2023-04-18 - PCB: Buck Converter Issue
 For some reason the buck converter is always burned whenever a 24V input is provided to the input channel of the board. We've lost both buck converters we have, and therefore we decided to purchase a more robust buck converter available here (https://www.amazon.com/dp/B07JZ2GQJF?psc=1&ref=ppx_yo2ov_dt_b_product_details) that can monitor input&output voltage&current to prevent further damage to our PCB board and batteries. The following image is a burned buck converter.
 ![](buck_burned.jpg)
+
+## 2023-04-19 - Drivetrain Subsystem: Platform Assembly
+Most hardware (electronics, sensors, etc.) have been assembled today. The image below shows the overall appearance of AutoLug.
+![](back_view.PNG)
+![](front_view.PNG)
 
 ## 2023-04-20 - Human Recognition Subsystem (QR): Transition to QR code
 The mentioned problem above seem to cannot be easily resolved, therefore a different human identification technique is proposed. The new techinque will be QR code based, i.e. the owner will register him/herself with AutoLug, and AutoLug will return a QR code specific to the owner. Therefore, human recognition problem is reduced to QR code detection and QR code decode problem. We used some OpenCV APIs to realized QR code detection and decoding feature, and the image below shows that this method is able to detect&decode all QR codes and return a bounding box around the QR code that encodes the correct message ("abcd" in the case of the image shown below).
@@ -95,5 +95,3 @@ To make the tracking more consistent, we decided to incorporate object tracking 
 
 ## 2023-04-26 - Project Complete
 After some fine-tuning, we officially concluded AutoLug project! The following two videos demonstrate AutoLug's functionalities under manual mode and autonomous tracking mode.
-![](https://github.com/davidchencsl/ECE445-project/blob/main/notebooks/jack/manual.MOV)
-![](https://github.com/davidchencsl/ECE445-project/blob/main/notebooks/jack/auto.MOV)
