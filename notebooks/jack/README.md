@@ -25,7 +25,6 @@
         4. [Resolving Issue 2](#2023-04-25---human-recognition-subsystem-qr-resolving-issue-2)
 5. [Demo](#2023-04-26---project-complete)
 
-
 ## 2023-02-20 - Shopping List Confirmed
 - 20W DC-DC buck converter power module with 7~24V input and 5V/4A output
 - N-channel power MOSFET - 30V / 60A
@@ -76,7 +75,7 @@ For some reason the buck converter is always burned whenever a 24V input is prov
 
 ## 2023-04-20 - Human Recognition Subsystem (QR): Transition to QR code
 The mentioned problem above seem to cannot be easily resolved, therefore a different human identification technique is proposed. The new techinque will be QR code based, i.e. the owner will register him/herself with AutoLug, and AutoLug will return a QR code specific to the owner. Therefore, human recognition problem is reduced to QR code detection and QR code decode problem. We used some OpenCV APIs to realized QR code detection and decoding feature, and the image below shows that this method is able to detect&decode all QR codes and return a bounding box around the QR code that encodes the correct message ("abcd" in the case of the image shown below).
-![](platform_received.jpg)
+![](QR_code.jpg)
 
 ## 2023-04-21 - PCB: I2C Issue
 For some reason the I2C communication channel die frequently when the motors are tuning, and the issue is getting worse when the platform is actually driving on the ground. We investigated the issue and first thought that it was caused by the lack of flyback diodes acorss the motors. However, adding the flyback diodes did not revolve the issue but disenabled controllability of the motors. We then realized the issue was caused by signal interference from the motor channel, as I2C communication channel is right next to motor channel. We seperate the I2C channel and the motor chanel using electric-duct tapes, and the issue is revolved.
@@ -96,6 +95,5 @@ To make the tracking more consistent, we decided to incorporate object tracking 
 
 ## 2023-04-26 - Project Complete
 After some fine-tuning, we officially concluded AutoLug project! The following two videos demonstrate AutoLug's functionalities under manual mode and autonomous tracking mode.
-![](manual.MOV)
-![](auto.MOV)
-
+![](https://github.com/davidchencsl/ECE445-project/blob/main/notebooks/jack/manual.MOV)
+![](https://github.com/davidchencsl/ECE445-project/blob/main/notebooks/jack/auto.MOV)
