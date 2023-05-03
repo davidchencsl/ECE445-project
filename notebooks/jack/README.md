@@ -3,7 +3,7 @@
 1. [Shopping List Confirmed](#Shopping List Confirmed)
 
 
-## 2023-02-20 - Shopping List Confirmed <a name="Shopping List Confirmed"></a>
+## <a name="Shopping List Confirmed"></a> 2023-02-20 - Shopping List Confirmed 
 - 20W DC-DC buck converter power module with 7~24V input and 5V/4A output
 - N-channel power MOSFET - 30V / 60A
 - 80 pieces Female to Female Jumper Wires (4 and 8 Inch)
